@@ -1,0 +1,10 @@
+[package]
+name = "rdp"
+version = "0.1.0"
+edition = "2021"
+authors = ["Success Kingsley <hello@xosnrdev.tech>"]
+description = "Recursive Decent Parser for a Programming Language"
+homepage = "https://github.com/xosnrdev/rdp?tab=readme-ov-file#readme"
+repository = "https://github.com/xosnrdev/rdp"
+
+[dependencies]
