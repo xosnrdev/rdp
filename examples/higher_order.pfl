@@ -1,0 +1,4 @@
+(* examples/higher_order.pfl *)
+let twice = \f -> \x -> f (f x) in
+let add1 = \x -> x + 1 in
+twice add1 5

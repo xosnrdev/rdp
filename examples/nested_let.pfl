@@ -1,0 +1,5 @@
+(* examples/nested_let.pfl *)
+let x = 5 in
+let y = x * 2 in
+let z = \n -> n * y in
+z (x + 1)

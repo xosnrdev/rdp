@@ -1,0 +1,5 @@
+(* examples/compose.pfl *)
+let compose = \f -> \g -> \x -> f (g x) in
+let double = \x -> x * 2 in
+let inc = \x -> x + 1 in
+compose double inc 5

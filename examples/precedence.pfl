@@ -1,0 +1,4 @@
+(* examples/precedence.pfl *)
+let f = \x -> x * 2 + 1 in
+let g = \x -> x + 3 * 2 in
+f (g 5)
