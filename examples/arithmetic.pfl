@@ -1,5 +1,7 @@
-(* examples/arithmetic.pfl *)
-let a = 5 in
-let b = 3 in
-let result = a * b + (a - b) / 2 in
-result > 10
+// arithmetic.pfl
+// Demonstrates basic arithmetic operations
+
+let x = 10 in
+let y = 5 in
+let z = (x + y) * 2 in
+z / (x - y)

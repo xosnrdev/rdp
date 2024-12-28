@@ -1,7 +1,10 @@
-(* examples/factorial.pfl *)
-let fact = \n -> 
-  if n == 0 then 
-    1 
-  else 
-    n * fact (n - 1) 
-in fact 5
+// factorial.pfl
+// Implements a recursive factorial function
+
+let factorial = \n: Int ->
+    if n == 0 then
+        1
+    else
+        n * factorial (n - 1)
+in
+factorial 5

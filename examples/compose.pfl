@@ -1,5 +1,7 @@
-(* examples/compose.pfl *)
-let compose = \f -> \g -> \x -> f (g x) in
-let double = \x -> x * 2 in
-let inc = \x -> x + 1 in
-compose double inc 5
+// compose.pfl
+// Demonstrates function composition and lambda expressions
+
+let add = \x: Int -> x + 1 in
+let multiply = \x: Int -> x * 2 in
+let composed = multiply . add in
+composed 5

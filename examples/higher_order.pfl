@@ -1,4 +1,6 @@
-(* examples/higher_order.pfl *)
-let twice = \f -> \x -> f (f x) in
-let add1 = \x -> x + 1 in
-twice add1 5
+// higher_order.pfl
+// Demonstrates higher-order functions
+
+let apply_twice = \f: Int -> Int -> \x: Int -> f (f x) in
+let increment = \x: Int -> x + 1 in
+apply_twice increment 5
