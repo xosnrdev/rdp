@@ -26,7 +26,10 @@ This project implements a Recursive Descent Parser for a minimalist pure functio
 ├── grammar/
 │   └── grammar.ebnf
 └── src/
-    ├── token.rs
+    ├── main.rs
+    ├── ast.rs
+    ├── error.rs
+    ├── lib.rs
     ├── lexer.rs
     └── parser.rs
 ```
