@@ -1,8 +1,8 @@
 //! src/parser.rs
 
 use crate::{
-    ArithmeticOperator, ComparisonOperator, Expression, MatchArm, ParseError, Pattern, Program,
-    Term, Token, TypeAnnotation,
+    ArithmeticOperator, ComparisonOperator, Expression, LogicOperator, MatchArm, ParseError,
+    Pattern, Program, Term, Token, TypeAnnotation,
 };
 
 //-------------------------------------------------------------------------
@@ -38,7 +38,7 @@ impl Parser {
             Some(Token::If) => self.parse_if_expr(),
             Some(Token::Lambda) => self.parse_lambda(),
             Some(Token::Match) => self.parse_pattern_match(),
-            _ => self.parse_comparison(), // Comparison includes applications
+            _ => self.parse_comparison(),
         }
     }
 
@@ -123,6 +123,7 @@ impl Parser {
     /// Parses a comparison expression.
     fn parse_comparison(&mut self) -> Result<Expression, ParseError> {
         let left = self.parse_logic()?;
+
         if let Some(operator) = match self.current_token() {
             Some(Token::Equal) => Some(ComparisonOperator::Equal),
             Some(Token::LessThan) => Some(ComparisonOperator::LessThan),
@@ -143,9 +144,37 @@ impl Parser {
 
     /// Parses logical expressions.
     ///
-    /// Placeholder for future implementation.
+    /// Handles logical operators `&&` and `||`, respecting operator precedence.
+    /// Supports multiple chained logical operations (e.g., `a && b || c`).
     fn parse_logic(&mut self) -> Result<Expression, ParseError> {
-        self.parse_arithmetic()
+        // Parse the left-hand side arithmetic expression
+        let mut left = self.parse_arithmetic()?;
+
+        // Loop to handle multiple logical operators (left-associative)
+        while let Some(token) = self.current_token() {
+            // Determine if the current token is a logical operator
+            let operator = match token {
+                Token::And => LogicOperator::And,
+                Token::Or => LogicOperator::Or,
+                // Exit the loop if no logical operator is found
+                _ => break,
+            };
+
+            // Consume the operator token
+            self.advance();
+
+            // Parse the right-hand side arithmetic expression
+            let right = self.parse_arithmetic()?;
+
+            // Construct the Logic expression node
+            left = Expression::Logic {
+                left: Box::new(left),
+                operator,
+                right: Some(Box::new(right)),
+            };
+        }
+
+        Ok(left)
     }
 
     /// Parses arithmetic expressions.
@@ -157,7 +186,7 @@ impl Parser {
         while let Some(operator) = match self.current_token() {
             Some(Token::Plus) => Some(ArithmeticOperator::Add),
             Some(Token::Minus) => Some(ArithmeticOperator::Subtract),
-            Some(Token::Wildcard) => Some(ArithmeticOperator::Multiply),
+            Some(Token::Star) => Some(ArithmeticOperator::Multiply),
             Some(Token::Slash) => Some(ArithmeticOperator::Divide),
             _ => None,
         } {
@@ -193,7 +222,8 @@ impl Parser {
                     let arg = self.parse_term()?;
                     expressions.push(arg);
                 }
-                _ => break, // Stop if the next token cannot be part of an application
+                // Stop if the next token cannot be part of an application
+                _ => break,
             }
         }
 
@@ -311,7 +341,6 @@ impl Parser {
                     "Float" => Ok(TypeAnnotation::Float),
                     "(" => {
                         // Handle function types like (Int -> Bool)
-                        // Consume '('
                         self.consume_token(Token::LeftParen, "Expected '(' in function type")?;
                         let from_type = self.parse_type_annotation()?;
                         self.consume_token(Token::Arrow, "Expected '->' in function type")?;

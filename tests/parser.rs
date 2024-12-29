@@ -1,8 +1,8 @@
 //! tests/parser.rs
 
 use rdp::{
-    ArithmeticOperator, ComparisonOperator, Expression, Lexer, MatchArm, ParseError, Parser,
-    Pattern, Program, Term, Token, TypeAnnotation,
+    ArithmeticOperator, ComparisonOperator, Expression, Lexer, LogicOperator, MatchArm, ParseError,
+    Parser, Pattern, Program, Term, Token, TypeAnnotation,
 };
 
 /// Tests parsing of a `let` expression.
@@ -358,6 +358,185 @@ fn test_parse_application_with_lambda() {
                 }),
             },
         ]),
+    };
+
+    // Assert
+    assert_eq!(program, expected);
+}
+
+#[test]
+fn test_parse_single_logical_and() {
+    // Arrange
+    let input = "a && b";
+    let program = parse_input(input);
+
+    // Act
+    let expected = Program {
+        expression: Expression::Logic {
+            left: Box::new(Expression::Term(Term::Identifier("a".to_string()))),
+            operator: LogicOperator::And,
+            right: Some(Box::new(Expression::Term(Term::Identifier(
+                "b".to_string(),
+            )))),
+        },
+    };
+
+    // Assert
+    assert_eq!(program, expected);
+}
+
+#[test]
+fn test_parse_single_logical_or() {
+    // Arrange
+    let input = "a || b";
+    let program = parse_input(input);
+
+    // Act
+    let expected = Program {
+        expression: Expression::Logic {
+            left: Box::new(Expression::Term(Term::Identifier("a".to_string()))),
+            operator: LogicOperator::Or,
+            right: Some(Box::new(Expression::Term(Term::Identifier(
+                "b".to_string(),
+            )))),
+        },
+    };
+
+    // Assert
+    assert_eq!(program, expected);
+}
+
+#[test]
+fn test_parse_chained_logical_operators() {
+    // Arrange
+    let input = "a && b || c";
+    let program = parse_input(input);
+
+    // Act
+    let expected = Program {
+        expression: Expression::Logic {
+            left: Box::new(Expression::Logic {
+                left: Box::new(Expression::Term(Term::Identifier("a".to_string()))),
+                operator: LogicOperator::And,
+                right: Some(Box::new(Expression::Term(Term::Identifier(
+                    "b".to_string(),
+                )))),
+            }),
+            operator: LogicOperator::Or,
+            right: Some(Box::new(Expression::Term(Term::Identifier(
+                "c".to_string(),
+            )))),
+        },
+    };
+
+    // Assert
+    assert_eq!(program, expected);
+}
+
+#[test]
+fn test_parse_logical_expression_with_arithmetic() {
+    // Arrange
+    let input = "a + b && c * d";
+    let program = parse_input(input);
+
+    // Act
+    let expected = Program {
+        expression: Expression::Logic {
+            left: Box::new(Expression::Arithmetic {
+                left: Box::new(Expression::Term(Term::Identifier("a".to_string()))),
+                operator: ArithmeticOperator::Add,
+                right: Box::new(Expression::Term(Term::Identifier("b".to_string()))),
+            }),
+            operator: LogicOperator::And,
+            right: Some(Box::new(Expression::Arithmetic {
+                left: Box::new(Expression::Term(Term::Identifier("c".to_string()))),
+                operator: ArithmeticOperator::Multiply,
+                right: Box::new(Expression::Term(Term::Identifier("d".to_string()))),
+            })),
+        },
+    };
+
+    // Assert
+    assert_eq!(program, expected);
+}
+
+#[test]
+fn test_parse_nested_logical_expressions() {
+    let input = "a && (b || c)";
+    let program = parse_input(input);
+
+    let expected = Program {
+        expression: Expression::Logic {
+            left: Box::new(Expression::Term(Term::Identifier("a".to_string()))),
+            operator: LogicOperator::And,
+            right: Some(Box::new(Expression::Term(Term::GroupedExpression(
+                Box::new(Expression::Logic {
+                    left: Box::new(Expression::Term(Term::Identifier("b".to_string()))),
+                    operator: LogicOperator::Or,
+                    right: Some(Box::new(Expression::Term(Term::Identifier(
+                        "c".to_string(),
+                    )))),
+                }),
+            )))),
+        },
+    };
+
+    assert_eq!(program, expected);
+}
+
+#[test]
+fn test_parse_logical_expression_with_function_application() {
+    // Arrange
+    let input = "f x && g y";
+    let program = parse_input(input);
+
+    // Act
+    let expected = Program {
+        expression: Expression::Logic {
+            left: Box::new(Expression::Application(vec![
+                Expression::Term(Term::Identifier("f".to_string())),
+                Expression::Term(Term::Identifier("x".to_string())),
+            ])),
+            operator: LogicOperator::And,
+            right: Some(Box::new(Expression::Application(vec![
+                Expression::Term(Term::Identifier("g".to_string())),
+                Expression::Term(Term::Identifier("y".to_string())),
+            ]))),
+        },
+    };
+
+    // Assert
+    assert_eq!(program, expected);
+}
+
+#[test]
+fn test_parse_complex_logical_expression() {
+    // Arrange
+    let input = "a + b && f x || c * d";
+    let program = parse_input(input);
+
+    // Act
+    let expected = Program {
+        expression: Expression::Logic {
+            left: Box::new(Expression::Logic {
+                left: Box::new(Expression::Arithmetic {
+                    left: Box::new(Expression::Term(Term::Identifier("a".to_string()))),
+                    operator: ArithmeticOperator::Add,
+                    right: Box::new(Expression::Term(Term::Identifier("b".to_string()))),
+                }),
+                operator: LogicOperator::And,
+                right: Some(Box::new(Expression::Application(vec![
+                    Expression::Term(Term::Identifier("f".to_string())),
+                    Expression::Term(Term::Identifier("x".to_string())),
+                ]))),
+            }),
+            operator: LogicOperator::Or,
+            right: Some(Box::new(Expression::Arithmetic {
+                left: Box::new(Expression::Term(Term::Identifier("c".to_string()))),
+                operator: ArithmeticOperator::Multiply,
+                right: Box::new(Expression::Term(Term::Identifier("d".to_string()))),
+            })),
+        },
     };
 
     // Assert
