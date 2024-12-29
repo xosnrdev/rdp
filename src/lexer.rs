@@ -93,7 +93,7 @@ impl Lexer {
             '+' => Ok(Token::Plus),
             '-' if self.match_char('>') => Ok(Token::Arrow),
             '-' => Ok(Token::Minus),
-            '*' => Ok(Token::Star),
+            '*' => Ok(Token::Wildcard),
             '/' => Ok(Token::Slash),
             '.' => Ok(Token::Dot),
             '|' => Ok(Token::Pipe),

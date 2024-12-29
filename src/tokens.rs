@@ -52,7 +52,7 @@ pub enum Token {
     /// Represents the subtraction operator (`-`).
     Minus,
     /// Represents the multiplication operator (`*`).
-    Star,
+    Wildcard,
     /// Represents the division operator (`/`).
     Slash,
     /// Represents the arrow operator (`->`), often used for function types.
