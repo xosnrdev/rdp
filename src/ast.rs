@@ -87,6 +87,9 @@ pub enum Expression {
     Application(Vec<Expression>),
     /// A terminal node in the AST, such as a literal or grouped expression.
     Term(Term),
+
+    /// Function composition, e.g., `f . g`.
+    FunctionComposition(FunctionComposition),
 }
 
 /// Represents a terminal expression in the language.
@@ -173,4 +176,20 @@ pub enum ArithmeticOperator {
     Multiply,
     /// Division operator (`/`).
     Divide,
+}
+
+/// Represents operators for function composition.
+#[derive(Debug, PartialEq, Clone)]
+pub enum CompositionOperator {
+    /// Function composition operator (`.`).
+    Compose,
+}
+
+/// Represents a function composition expression.
+#[derive(Debug, PartialEq, Clone)]
+pub struct FunctionComposition {
+    /// The first function in the composition.
+    pub f: Box<Expression>,
+    /// The second function in the composition.
+    pub g: Box<Expression>,
 }

@@ -22,7 +22,7 @@ pub struct Parser {
 impl Parser {
     /// Creates a new parser instance.
     pub fn new(tokens: Vec<Token>) -> Self {
-        Parser { tokens, current: 0 }
+        Self { tokens, current: 0 }
     }
 
     /// Parses a program.
