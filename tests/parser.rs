@@ -1,8 +1,8 @@
 //! tests/parser.rs
 
 use rdp::{
-    ArithmeticOperator, ComparisonOperator, Expression, MatchArm, ParseError, Parser, Pattern,
-    Program, Term, Token, TypeAnnotation,
+    ArithmeticOperator, ComparisonOperator, Expression, Lexer, MatchArm, ParseError, Parser,
+    Pattern, Program, Term, Token, TypeAnnotation,
 };
 
 /// Tests parsing of a `let` expression.
@@ -240,4 +240,126 @@ fn test_single_term_application() {
             expression: Expression::Term(Term::Identifier("x".to_string())),
         }
     );
+}
+
+fn tokenize_input(input: &str) -> Vec<Token> {
+    let mut lexer = Lexer::new(input);
+    lexer.tokenize().expect("Failed to tokenize input")
+}
+
+fn parse_input(input: &str) -> Program {
+    let tokens = tokenize_input(input);
+    let mut parser = Parser::new(tokens);
+    parser.parse_program().expect("Failed to parse input")
+}
+
+/// Tests parsing of a single identifier.
+#[test]
+fn test_parse_single_application() {
+    // Arrange
+    let input = "f x";
+    let program = parse_input(input);
+
+    // Act
+    let expected = Program {
+        expression: Expression::Application(vec![
+            Expression::Term(Term::Identifier("f".to_string())),
+            Expression::Term(Term::Identifier("x".to_string())),
+        ]),
+    };
+
+    // Assert
+    assert_eq!(program, expected);
+}
+
+/// Tests parsing of multiple identifiers.
+#[test]
+fn test_parse_multiple_applications() {
+    // Arrange
+    let input = "f x y";
+    let program = parse_input(input);
+
+    // Act
+    let expected = Program {
+        expression: Expression::Application(vec![
+            Expression::Term(Term::Identifier("f".to_string())),
+            Expression::Term(Term::Identifier("x".to_string())),
+            Expression::Term(Term::Identifier("y".to_string())),
+        ]),
+    };
+
+    // Assert
+    assert_eq!(program, expected);
+}
+
+#[test]
+fn test_parse_application_with_nested_functions() {
+    // Arrange
+    let input = "f (g x) y";
+    let program = parse_input(input);
+
+    // Act
+    let expected = Program {
+        expression: Expression::Application(vec![
+            Expression::Term(Term::Identifier("f".to_string())),
+            Expression::Term(Term::GroupedExpression(Box::new(Expression::Application(
+                vec![
+                    Expression::Term(Term::Identifier("g".to_string())),
+                    Expression::Term(Term::Identifier("x".to_string())),
+                ],
+            )))),
+            Expression::Term(Term::Identifier("y".to_string())),
+        ]),
+    };
+
+    // Assert
+    assert_eq!(program, expected);
+}
+
+#[test]
+fn test_parse_application_with_arithmetic() {
+    // Arrange
+    let input = "f x + y";
+    let program = parse_input(input);
+
+    // Act
+    let expected = Program {
+        expression: Expression::Arithmetic {
+            left: Box::new(Expression::Application(vec![
+                Expression::Term(Term::Identifier("f".to_string())),
+                Expression::Term(Term::Identifier("x".to_string())),
+            ])),
+            operator: ArithmeticOperator::Add,
+            right: Box::new(Expression::Term(Term::Identifier("y".to_string()))),
+        },
+    };
+
+    // Assert
+    assert_eq!(program, expected);
+}
+
+#[test]
+fn test_parse_application_with_lambda() {
+    // Arrange
+    let input = "f \\x -> x + 1";
+    let program = parse_input(input);
+
+    // Act
+    let expected = Program {
+        expression: Expression::Application(vec![
+            Expression::Term(Term::Identifier("f".to_string())),
+            Expression::Lambda {
+                parameter: "x".to_string(),
+                type_annotation: None,
+                body: Box::new(Expression::Arithmetic {
+                    left: Box::new(Expression::Term(Term::Identifier("x".to_string()))),
+                    operator: ArithmeticOperator::Add,
+                    right: Box::new(Expression::Term(Term::Number(1.0))),
+                }),
+            },
+        ]),
+    };
+
+    // Assert
+    assert_eq!(program, expected);
 }

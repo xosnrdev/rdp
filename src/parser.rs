@@ -141,20 +141,92 @@ impl Parser {
         }
     }
 
-    /// Parses logical expressions (placeholder for now).
+    /// Parses logical expressions.
+    ///
+    /// Placeholder for future implementation.
     fn parse_logic(&mut self) -> Result<Expression, ParseError> {
         self.parse_arithmetic()
     }
 
+    /// Parses arithmetic expressions.
+    ///
+    /// Handles operators like `+`, `-`, `*`, and `/`, respecting operator precedence.
+    fn parse_arithmetic(&mut self) -> Result<Expression, ParseError> {
+        let mut left = self.parse_application()?;
+
+        while let Some(operator) = match self.current_token() {
+            Some(Token::Plus) => Some(ArithmeticOperator::Add),
+            Some(Token::Minus) => Some(ArithmeticOperator::Subtract),
+            Some(Token::Wildcard) => Some(ArithmeticOperator::Multiply),
+            Some(Token::Slash) => Some(ArithmeticOperator::Divide),
+            _ => None,
+        } {
+            self.advance();
+            let right = self.parse_application()?;
+            left = Expression::Arithmetic {
+                left: Box::new(left),
+                operator,
+                right: Box::new(right),
+            };
+        }
+
+        Ok(left)
+    }
+
+    /// Parses a function application expression.
+    ///
+    /// An application consists of a primary term followed by one or more arguments.
+    /// For example, `f x y` is parsed as Application([f, x, y]).
+    fn parse_application(&mut self) -> Result<Expression, ParseError> {
+        // Parse the primary term
+        let mut expressions = vec![self.parse_term()?];
+
+        // Continuously parse arguments as long as the next token starts a term
+        while let Some(token) = self.current_token() {
+            match token {
+                // Tokens that can start a term
+                Token::Identifier(_)
+                | Token::Number(_)
+                | Token::LeftParen
+                | Token::Wildcard
+                | Token::Lambda => {
+                    let arg = self.parse_term()?;
+                    expressions.push(arg);
+                }
+                _ => break, // Stop if the next token cannot be part of an application
+            }
+        }
+
+        if expressions.len() > 1 {
+            Ok(Expression::Application(expressions))
+        } else {
+            Ok(expressions.pop().unwrap())
+        }
+    }
+
     /// Parses terms (identifiers, numbers, etc.).
     fn parse_term(&mut self) -> Result<Expression, ParseError> {
-        match self.advance() {
-            Some(Token::Identifier(name)) => Ok(Expression::Term(Term::Identifier(name))),
-            Some(Token::Number(value)) => Ok(Expression::Term(Term::Number(value))),
+        match self.current_token() {
+            Some(Token::Identifier(name)) => {
+                let name = name.clone();
+                self.advance();
+                Ok(Expression::Term(Term::Identifier(name)))
+            }
+            Some(Token::Number(value)) => {
+                let value = *value;
+                self.advance();
+                Ok(Expression::Term(Term::Number(value)))
+            }
             Some(Token::LeftParen) => {
+                self.advance(); // Consume '('
                 let expr = self.parse_expression()?;
                 self.consume_token(Token::RightParen, "Expected ')' after expression")?;
                 Ok(Expression::Term(Term::GroupedExpression(Box::new(expr))))
+            }
+            Some(Token::Lambda) => self.parse_lambda(),
+            Some(Token::Wildcard) => {
+                self.advance();
+                Ok(Expression::Term(Term::Identifier("_".to_string())))
             }
             Some(token) => Err(ParseError::UnexpectedToken {
                 expected: "term".to_string(),
@@ -165,11 +237,21 @@ impl Parser {
         }
     }
 
+    /// Parses a pattern.
     fn parse_pattern(&mut self) -> Result<Pattern, ParseError> {
-        match self.advance() {
-            Some(Token::Identifier(name)) => Ok(Pattern::Identifier(name)),
-            Some(Token::Number(value)) => Ok(Pattern::Number(value)),
+        match self.current_token() {
+            Some(Token::Identifier(name)) => {
+                let name = name.clone();
+                self.advance();
+                Ok(Pattern::Identifier(name))
+            }
+            Some(Token::Number(value)) => {
+                let value = *value;
+                self.advance();
+                Ok(Pattern::Number(value))
+            }
             Some(Token::LeftParen) => {
+                self.advance(); // Consume '('
                 let pattern = self.parse_pattern()?;
                 self.consume_token(Token::RightParen, "Expected ')' after pattern")?;
                 Ok(Pattern::Grouped(Box::new(pattern)))
@@ -199,7 +281,9 @@ impl Parser {
 
     /// Parses an identifier token.
     fn parse_identifier(&mut self) -> Result<String, ParseError> {
-        if let Some(Token::Identifier(name)) = self.advance() {
+        if let Some(Token::Identifier(name)) = self.current_token() {
+            let name = name.clone();
+            self.advance();
             Ok(name)
         } else {
             Err(ParseError::UnexpectedToken {
@@ -214,26 +298,51 @@ impl Parser {
         }
     }
 
-    /// Parses type annotations (placeholder for now).
+    /// Parses type annotations.
     fn parse_type_annotation(&mut self) -> Result<TypeAnnotation, ParseError> {
-        if let Some(Token::Identifier(type_name)) = self.advance() {
-            match type_name.as_str() {
-                "Int" => Ok(TypeAnnotation::Int),
-                "Bool" => Ok(TypeAnnotation::Bool),
-                "String" => Ok(TypeAnnotation::String),
-                "Float" => Ok(TypeAnnotation::Float),
-                _ => Err(ParseError::InvalidIdentifier(type_name)),
+        match self.current_token() {
+            Some(Token::Identifier(type_name)) => {
+                let type_name = type_name.clone();
+                self.advance();
+                match type_name.as_str() {
+                    "Int" => Ok(TypeAnnotation::Int),
+                    "Bool" => Ok(TypeAnnotation::Bool),
+                    "String" => Ok(TypeAnnotation::String),
+                    "Float" => Ok(TypeAnnotation::Float),
+                    "(" => {
+                        // Handle function types like (Int -> Bool)
+                        // Consume '('
+                        self.consume_token(Token::LeftParen, "Expected '(' in function type")?;
+                        let from_type = self.parse_type_annotation()?;
+                        self.consume_token(Token::Arrow, "Expected '->' in function type")?;
+                        let to_type = self.parse_type_annotation()?;
+                        self.consume_token(Token::RightParen, "Expected ')' in function type")?;
+                        Ok(TypeAnnotation::Function(
+                            Box::new(from_type),
+                            Box::new(to_type),
+                        ))
+                    }
+                    _ => Err(ParseError::InvalidIdentifier(type_name)),
+                }
             }
-        } else {
-            Err(ParseError::UnexpectedToken {
+            Some(Token::LeftParen) => {
+                // Handle function types like (Int -> Bool)
+                self.advance(); // Consume '('
+                let from_type = self.parse_type_annotation()?;
+                self.consume_token(Token::Arrow, "Expected '->' in function type")?;
+                let to_type = self.parse_type_annotation()?;
+                self.consume_token(Token::RightParen, "Expected ')' in function type")?;
+                Ok(TypeAnnotation::Function(
+                    Box::new(from_type),
+                    Box::new(to_type),
+                ))
+            }
+            Some(token) => Err(ParseError::UnexpectedToken {
                 expected: "type annotation".to_string(),
-                found: self
-                    .current_token()
-                    .cloned()
-                    .map(|t| format!("{:?}", t))
-                    .unwrap_or_else(|| "EOF".to_string()),
+                found: format!("{:?}", token),
                 message: "Expected a type annotation".to_string(),
-            })
+            }),
+            None => Err(ParseError::UnexpectedEOF),
         }
     }
 
@@ -245,8 +354,9 @@ impl Parser {
     /// Advances the parser and consumes the current token.
     fn advance(&mut self) -> Option<Token> {
         if self.current < self.tokens.len() {
+            let token = self.tokens[self.current].clone();
             self.current += 1;
-            self.tokens.get(self.current - 1).cloned()
+            Some(token)
         } else {
             None
         }
@@ -260,27 +370,5 @@ impl Parser {
         } else {
             false
         }
-    }
-
-    fn parse_arithmetic(&mut self) -> Result<Expression, ParseError> {
-        let mut left = self.parse_term()?;
-
-        while let Some(operator) = match self.current_token() {
-            Some(Token::Plus) => Some(ArithmeticOperator::Add),
-            Some(Token::Minus) => Some(ArithmeticOperator::Subtract),
-            Some(Token::Star) => Some(ArithmeticOperator::Multiply),
-            Some(Token::Slash) => Some(ArithmeticOperator::Divide),
-            _ => None,
-        } {
-            self.advance();
-            let right = self.parse_term()?;
-            left = Expression::Arithmetic {
-                left: Box::new(left),
-                operator,
-                right: Box::new(right),
-            };
-        }
-
-        Ok(left)
     }
 }
