@@ -93,7 +93,7 @@ impl Lexer {
             '+' => Ok(Token::Plus),
             '-' if self.match_char('>') => Ok(Token::Arrow),
             '-' => Ok(Token::Minus),
-            '*' => Ok(Token::Wildcard),
+            '*' => Ok(Token::Star),
             '/' => Ok(Token::Slash),
             '.' => Ok(Token::Dot),
             '|' => Ok(Token::Pipe),
@@ -109,7 +109,7 @@ impl Lexer {
             c if c.is_ascii_alphabetic() => self.identifier(c),
 
             // Wildcard identifier
-            '_' => Ok(Token::Identifier("_".to_string())),
+            '_' => Ok(Token::Wildcard),
 
             // Unexpected character
             _ => Err(ParseError::UnexpectedToken {

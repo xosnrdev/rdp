@@ -52,7 +52,7 @@ pub enum Token {
     /// Represents the subtraction operator (`-`).
     Minus,
     /// Represents the multiplication operator (`*`).
-    Wildcard,
+    Star,
     /// Represents the division operator (`/`).
     Slash,
     /// Represents the arrow operator (`->`), often used for function types.
@@ -77,6 +77,10 @@ pub enum Token {
     Colon,
     /// Represents the assignment operator (`=`) used in variable declarations like `let x = ...`.
     Assign,
+
+    // Wildcard
+    /// Represents the wildcard identifier (`_`).
+    Wildcard,
 
     // End of File
     /// Represents the end of the input source, signaling no more tokens.
