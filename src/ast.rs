@@ -4,130 +4,131 @@
 // Types
 //-------------------------------------------------------------------------
 
-/// Represents the entire program.
-#[derive(Debug, PartialEq)]
-pub enum Program {
-    /// The program consists of a single expression.
-    Expression(Box<Expression>),
+/// The root node of the Abstract Syntax Tree (AST).
+///
+/// A program consists of a single expression, which may contain nested expressions.
+#[derive(Debug, PartialEq, Clone)]
+pub struct Program {
+    /// The root expression of the program.
+    pub expression: Expression,
 }
 
-/// Enumerates all possible expressions in the language.
-#[derive(Debug, PartialEq)]
+/// Represents an expression in the language.
+///
+/// Expressions form the core of the language's functionality, encompassing
+/// constructs like `let` bindings, conditionals, lambdas, pattern matching,
+/// comparisons, logic, arithmetic, and more.
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
-    /// A let-binding expression.
-    Let {
-        /// The identifier being bound.
+    /// A `let` binding, which introduces a new variable or value.
+    LetExpr {
+        /// The identifier for the binding.
         identifier: String,
-        /// Optional type annotation.
+        /// An optional type annotation for the binding.
         type_annotation: Option<TypeAnnotation>,
-        /// The value being bound to the identifier.
+        /// The value to assign to the identifier.
         value: Box<Expression>,
-        /// The body expression where the identifier is in scope.
+        /// The body where the binding is available.
         body: Box<Expression>,
     },
-    /// An if-then-else expression.
-    If {
-        /// The condition expression.
+    /// An `if` expression, representing conditional branching.
+    IfExpr {
+        /// The condition to evaluate.
         condition: Box<Expression>,
-        /// The expression executed if the condition is true.
+        /// The expression executed if the condition evaluates to true.
         then_branch: Box<Expression>,
-        /// The expression executed if the condition is false.
+        /// The expression executed if the condition evaluates to false.
         else_branch: Box<Expression>,
     },
-    /// A lambda (anonymous function) expression.
+    /// A lambda (anonymous function) abstraction.
     Lambda {
-        /// The parameter name.
+        /// The parameter name for the lambda.
         parameter: String,
-        /// Optional type annotation for the parameter.
+        /// An optional type annotation for the parameter.
         type_annotation: Option<TypeAnnotation>,
-        /// The body of the lambda.
+        /// The body of the lambda function.
         body: Box<Expression>,
     },
-    /// A pattern matching expression.
-    Match {
-        /// The expression being matched.
-        expr: Box<Expression>,
-        /// A list of pattern-expression pairs.
-        arms: Vec<(Pattern, Box<Expression>)>,
+    /// A pattern match expression, allowing branching based on patterns.
+    PatternMatch {
+        /// The expression to match against.
+        expression: Box<Expression>,
+        /// The set of match arms to evaluate.
+        arms: Vec<MatchArm>,
     },
-    /// A comparison expression (e.g., `x == y`).
+    /// A comparison expression, e.g., `a < b` or `x == y`.
     Comparison {
-        /// The left-hand side expression.
+        /// The left-hand side of the comparison.
         left: Box<Expression>,
         /// The comparison operator.
-        operator: ComparisonOp,
-        /// The right-hand side expression.
-        right: Box<Expression>,
+        operator: ComparisonOperator,
+        /// The optional right-hand side of the comparison.
+        right: Option<Box<Expression>>,
     },
-    /// A logical expression (e.g., `a && b`).
+    /// A logical operation, e.g., `a && b` or `x || y`.
     Logic {
-        /// The left-hand side expression.
+        /// The left-hand operand.
         left: Box<Expression>,
         /// The logical operator.
-        operator: LogicOp,
-        /// The right-hand side expression.
-        right: Box<Expression>,
+        operator: LogicOperator,
+        /// The optional right-hand operand.
+        right: Option<Box<Expression>>,
     },
-    /// An arithmetic expression (e.g., `a + b`).
+    /// An arithmetic operation, e.g., `a + b` or `x * y`.
     Arithmetic {
-        /// The left-hand side expression.
+        /// The left-hand operand.
         left: Box<Expression>,
         /// The arithmetic operator.
-        operator: ArithmeticOp,
-        /// The right-hand side expression.
+        operator: ArithmeticOperator,
+        /// The right-hand operand.
         right: Box<Expression>,
     },
-    /// A function application expression (e.g., `f x`).
-    Application {
-        /// The function being applied.
-        function: Box<Expression>,
-        /// The list of argument expressions.
-        arguments: Vec<Box<Expression>>,
-    },
-    /// A function composition expression (e.g., `f . g`).
-    FunctionComposition {
-        /// The left function.
-        left: Box<Expression>,
-        /// The right function.
-        right: Box<Expression>,
-    },
-    /// A unary operation expression (e.g., `-x`).
-    Unary {
-        /// The unary operator.
-        operator: UnaryOp,
-        /// The operand expression.
-        operand: Box<Expression>,
-    },
-    /// A term, which is a basic unit in expressions.
+    /// A function or operator application, applied to a list of arguments.
+    Application(Vec<Expression>),
+    /// A terminal node in the AST, such as a literal or grouped expression.
     Term(Term),
 }
 
-/// Enumerates the basic terms in expressions.
-#[derive(Debug, PartialEq)]
+/// Represents a terminal expression in the language.
+#[derive(Debug, PartialEq, Clone)]
 pub enum Term {
-    /// An identifier.
+    /// An identifier, e.g., variable or function names.
     Identifier(String),
     /// A numeric literal.
     Number(f64),
-    /// A grouped expression.
-    Grouping(Box<Expression>),
-    /// A field access (e.g., `object.method`).
-    FieldAccess(Box<Expression>, String),
+    /// A grouped expression, e.g., `(expr)`.
+    GroupedExpression(Box<Expression>),
+    /// Accessing a member of an object or structure, e.g., `object.member`.
+    MemberAccess {
+        /// The base expression (e.g., the object or structure).
+        expression: Box<Expression>,
+        /// The member being accessed.
+        member: String,
+    },
 }
 
-/// Enumerates patterns used in pattern matching.
-#[derive(Debug, PartialEq)]
+/// Represents a single arm of a pattern match expression.
+#[derive(Debug, PartialEq, Clone)]
+pub struct MatchArm {
+    /// The pattern to match.
+    pub pattern: Pattern,
+    /// The expression to execute if the pattern matches.
+    pub expression: Box<Expression>,
+}
+
+/// Represents a pattern in a pattern match expression.
+#[derive(Debug, PartialEq, Clone)]
 pub enum Pattern {
-    /// An identifier pattern.
+    /// A pattern matching an identifier.
     Identifier(String),
-    /// A numeric literal pattern.
+    /// A pattern matching a numeric literal.
     Number(f64),
-    /// A grouped pattern.
-    Grouping(Box<Pattern>),
+    /// A grouped pattern, e.g., `(pattern)`.
+    Grouped(Box<Pattern>),
 }
 
-/// Enumerates type annotations.
-#[derive(Debug, PartialEq)]
+/// Represents type annotations for variables, parameters, or expressions.
+#[derive(Debug, PartialEq, Clone)]
 pub enum TypeAnnotation {
     /// Integer type.
     Int,
@@ -137,13 +138,13 @@ pub enum TypeAnnotation {
     String,
     /// Floating-point type.
     Float,
-    /// Function type (e.g., `(Int -> Bool)`).
+    /// Function type, mapping one type to another.
     Function(Box<TypeAnnotation>, Box<TypeAnnotation>),
 }
 
-/// Enumerates comparison operators.
-#[derive(Debug, PartialEq)]
-pub enum ComparisonOp {
+/// Represents operators for comparisons, e.g., `<`, `>`, `==`.
+#[derive(Debug, PartialEq, Clone)]
+pub enum ComparisonOperator {
     /// Equality operator (`==`).
     Equal,
     /// Less-than operator (`<`).
@@ -152,18 +153,18 @@ pub enum ComparisonOp {
     GreaterThan,
 }
 
-/// Enumerates logical operators.
-#[derive(Debug, PartialEq)]
-pub enum LogicOp {
+/// Represents logical operators, e.g., `&&`, `||`.
+#[derive(Debug, PartialEq, Clone)]
+pub enum LogicOperator {
     /// Logical AND operator (`&&`).
     And,
     /// Logical OR operator (`||`).
     Or,
 }
 
-/// Enumerates arithmetic operators.
-#[derive(Debug, PartialEq)]
-pub enum ArithmeticOp {
+/// Represents arithmetic operators, e.g., `+`, `-`, `*`, `/`.
+#[derive(Debug, PartialEq, Clone)]
+pub enum ArithmeticOperator {
     /// Addition operator (`+`).
     Add,
     /// Subtraction operator (`-`).
@@ -172,13 +173,4 @@ pub enum ArithmeticOp {
     Multiply,
     /// Division operator (`/`).
     Divide,
-}
-
-/// Enumerates unary operators.
-#[derive(Debug, PartialEq)]
-pub enum UnaryOp {
-    /// Negation operator (`-`).
-    Negate,
-    /// Logical NOT operator (`!`).
-    Not,
 }
