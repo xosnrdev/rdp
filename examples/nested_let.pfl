@@ -1,7 +1,4 @@
-// nested_let.pfl
-// Demonstrates nested let expressions
-
-let a = 5 in
-let b = a * 2 in
-let c = let d = b + 3 in d - a in
-c * b
+let x = 10 in
+let x = 20 in
+let y = x + 5 in
+y * 2

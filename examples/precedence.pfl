@@ -1,5 +1,4 @@
-// precedence.pfl
-// Tests operator precedence
-
-let result = 3 + 4 * 2 / (1 - 5) && 6 == 6 || 0 in
-result
+let a = 3 in
+let b = 4 in
+let c = 5 in
+a + b * c - (a + c) * b / a

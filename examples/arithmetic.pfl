@@ -1,7 +1,3 @@
-// arithmetic.pfl
-// Demonstrates basic arithmetic operations
-
 let x = 10 in
 let y = 5 in
-let z = (x + y) * 2 in
-z / (x - y)
+x + y * 2 - (y / 5)
