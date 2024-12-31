@@ -1,8 +1,8 @@
 //! tests/parser.rs
 
 use rdp::{
-    ArithmeticOperator, ComparisonOperator, Expression, Lexer, LogicOperator, MatchArm, ParseError,
-    Parser, Pattern, Program, Term, Token, TypeAnnotation,
+    ArithmeticOperator, ComparisonOperator, Expression, FunctionComposition, Lexer, LogicOperator,
+    MatchArm, ParseError, Parser, Pattern, Program, Term, Token, TypeAnnotation,
 };
 
 /// Tests parsing of a `let` expression.
@@ -462,9 +462,11 @@ fn test_parse_logical_expression_with_arithmetic() {
 
 #[test]
 fn test_parse_nested_logical_expressions() {
+    // Arrange
     let input = "a && (b || c)";
     let program = parse_input(input);
 
+    // Act
     let expected = Program {
         expression: Expression::Logic {
             left: Box::new(Expression::Term(Term::Identifier("a".to_string()))),
@@ -481,6 +483,7 @@ fn test_parse_nested_logical_expressions() {
         },
     };
 
+    // Assert
     assert_eq!(program, expected);
 }
 
@@ -537,6 +540,104 @@ fn test_parse_complex_logical_expression() {
                 right: Box::new(Expression::Term(Term::Identifier("d".to_string()))),
             })),
         },
+    };
+
+    // Assert
+    assert_eq!(program, expected);
+}
+
+/// 1) Tests parsing of a member access: `( expression . identifier )`
+#[test]
+fn test_parse_member_access() {
+    // Arrange
+    // example: (x + 1 . foo)
+    // This means we have a grouped expression (x + 1) followed by . foo
+    // so it should produce Expression::Term(Term::MemberAccess{...})
+    let input = "(x + 1 . foo)";
+    let program = parse_input(input);
+
+    // Act
+    let expected = Program {
+        expression: Expression::Term(Term::MemberAccess {
+            expression: Box::new(Expression::Arithmetic {
+                left: Box::new(Expression::Term(Term::Identifier("x".to_string()))),
+                operator: ArithmeticOperator::Add,
+                right: Box::new(Expression::Term(Term::Number(1.0))),
+            }),
+            member: "foo".to_string(),
+        }),
+    };
+
+    // Assert
+    assert_eq!(program, expected);
+}
+
+/// 2) Tests basic function composition: `f . g`
+#[test]
+fn test_parse_function_composition() {
+    // Arrange
+    // composition has precedence after comparison, so "f . g" is essentially
+    // Expression::FunctionComposition { f, g }
+    let input = "f . g";
+    let program = parse_input(input);
+
+    // Act
+    let expected = Program {
+        expression: Expression::FunctionComposition(FunctionComposition {
+            f: Box::new(Expression::Term(Term::Identifier("f".to_string()))),
+            g: Box::new(Expression::Term(Term::Identifier("g".to_string()))),
+        }),
+    };
+
+    // Assert
+    assert_eq!(program, expected);
+}
+
+/// 2b) Tests chained function composition: `f . g . h`
+#[test]
+fn test_parse_chained_function_composition() {
+    // Arrange
+    // This should parse left-associative ( (f . g) . h ) unless
+    // we specified otherwise.
+    let input = "f . g . h";
+    let program = parse_input(input);
+
+    // Act
+    // left: (f . g)
+    // right: h
+    let expected = Program {
+        expression: Expression::FunctionComposition(FunctionComposition {
+            f: Box::new(Expression::FunctionComposition(FunctionComposition {
+                f: Box::new(Expression::Term(Term::Identifier("f".to_string()))),
+                g: Box::new(Expression::Term(Term::Identifier("g".to_string()))),
+            })),
+            g: Box::new(Expression::Term(Term::Identifier("h".to_string()))),
+        }),
+    };
+
+    // Assert
+    assert_eq!(program, expected);
+}
+
+/// 2c) Tests composition with immediate application: `f . g x`
+#[test]
+fn test_parse_composition_with_application() {
+    // Arrange
+    // We have f . (g x)
+    // The parser sees '.' after f, then a comparison-level parse, which
+    // proceeds down to parse_application for "g x".
+    let input = "f . g x";
+    let program = parse_input(input);
+
+    // Act
+    let expected = Program {
+        expression: Expression::FunctionComposition(FunctionComposition {
+            f: Box::new(Expression::Term(Term::Identifier("f".to_string()))),
+            g: Box::new(Expression::Application(vec![
+                Expression::Term(Term::Identifier("g".to_string())),
+                Expression::Term(Term::Identifier("x".to_string())),
+            ])),
+        }),
     };
 
     // Assert
