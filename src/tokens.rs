@@ -1,88 +1,118 @@
 //! src/tokens.rs
 
-//-------------------------------------------------------------------------
-// Types
-//-------------------------------------------------------------------------
+/********************************************************************************
+ *                              TOKEN MODULE
+ *-------------------------------------------------------------------------------*
+ * This module defines the set of tokens recognized by our language lexer.
+ * Each token corresponds to the smallest atomic unit of the syntax, such as
+ * keywords, operators, delimiters, identifiers, or numeric literals.
+ *
+ * By enumerating all possible tokens here, both the lexer (which emits tokens)
+ * and the parser (which consumes tokens) share a clear contract of allowed
+ * symbols.
+ ********************************************************************************/
 
-/// Defines the set of tokens used by the parser.
-///
-/// Tokens represent the smallest units of meaning in the language's syntax.
-/// These tokens will be produced during the lexical analysis (tokenization)
-/// phase and consumed during parsing.
-///
-/// # Variants
-/// - Keywords such as `Let` or `If`
-/// - Operators like `+`, `-`, or `&&`
-/// - Literals such as identifiers and numbers
-/// - Delimiters such as parentheses or colons
-/// - End-of-file marker for indicating the end of the input
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
+    //--------------------------------------------------------------------------
     // Keywords
-    /// Represents the `let` keyword.
+    //--------------------------------------------------------------------------
+    /// Represents the `let` keyword used in binding expressions.
     Let,
-    /// Represents the `in` keyword.
+
+    /// Represents the `in` keyword, often paired with `let`.
     In,
-    /// Represents the `if` keyword.
+
+    /// Represents the `if` keyword for conditional expressions.
     If,
-    /// Represents the `then` keyword.
+
+    /// Represents the `then` keyword, part of an if-expression structure.
     Then,
-    /// Represents the `else` keyword.
+
+    /// Represents the `else` keyword, completing an if-expression.
     Else,
-    /// Represents the `match` keyword.
+
+    /// Represents the `match` keyword for pattern matching.
     Match,
-    /// Represents the `with` keyword.
+
+    /// Represents the `with` keyword, used with match-expressions.
     With,
-    /// Represents a lambda abstraction, denoted by `\` in the source code.
+
+    /// Represents the `\` symbol for lambda abstractions.
     Lambda,
 
+    //--------------------------------------------------------------------------
     // Operators
-    /// Represents the equality operator (`==`).
+    //--------------------------------------------------------------------------
+    /// Equality operator (`==`).
     Equal,
-    /// Represents the less-than operator (`<`).
+
+    /// Less-than operator (`<`).
     LessThan,
-    /// Represents the greater-than operator (`>`).
+
+    /// Greater-than operator (`>`).
     GreaterThan,
-    /// Represents the logical AND operator (`&&`).
+
+    /// Logical AND operator (`&&`).
     And,
-    /// Represents the logical OR operator (`||`).
+
+    /// Logical OR operator (`||`).
     Or,
-    /// Represents the addition operator (`+`).
+
+    /// Plus operator (`+`).
     Plus,
-    /// Represents the subtraction operator (`-`).
+
+    /// Minus operator (`-`).
     Minus,
-    /// Represents the multiplication operator (`*`).
+
+    /// Multiplication operator (`*`).
     Star,
-    /// Represents the division operator (`/`).
+
+    /// Division operator (`/`).
     Slash,
-    /// Represents the arrow operator (`->`), often used for function types.
+
+    /// Arrow operator (`->`), used in function types and lambdas.
     Arrow,
-    /// Represents a period (`.`), used in member access or other syntactic constructs.
+
+    /// Dot operator (`.`), relevant for composition or member access.
     Dot,
-    /// Represents a pipe (`|`), used in pattern matching or function composition.
+
+    /// Pipe symbol (`|`), often used in pattern matching arms.
     Pipe,
 
+    //--------------------------------------------------------------------------
     // Literals
-    /// Represents an identifier, e.g., variable or function names.
+    //--------------------------------------------------------------------------
+    /// Identifiers, e.g., variable or function names.
     Identifier(String),
-    /// Represents a numeric literal.
+
+    /// Numeric literal, storing a floating-point value for both int and float.
     Number(f64),
 
+    //--------------------------------------------------------------------------
     // Delimiters
-    /// Represents the left parenthesis (`(`).
+    //--------------------------------------------------------------------------
+    /// Left parenthesis (`(`).
     LeftParen,
-    /// Represents the right parenthesis (`)`).
+
+    /// Right parenthesis (`)`).
     RightParen,
-    /// Represents a colon (`:`), often used in type annotations or key-value pairs.
+
+    /// Colon (`:`), often used for type annotations.
     Colon,
-    /// Represents the assignment operator (`=`) used in variable declarations like `let x = ...`.
+
+    /// Assignment operator (`=`), used in bindings (`let x = expr`).
     Assign,
 
+    //--------------------------------------------------------------------------
     // Wildcard
-    /// Represents the wildcard identifier (`_`).
+    //--------------------------------------------------------------------------
+    /// Wildcard identifier (`_`), commonly used in patterns.
     Wildcard,
 
+    //--------------------------------------------------------------------------
     // End of File
-    /// Represents the end of the input source, signaling no more tokens.
+    //--------------------------------------------------------------------------
+    /// End-of-file marker. Indicates no more tokens are available.
     Eof,
 }

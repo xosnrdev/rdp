@@ -1,38 +1,24 @@
 //! src/main.rs
 
+/*******************************************************************************
+ *                                MAIN MODULE
+ *-------------------------------------------------------------------------------
+ * This is the entry point for our language processing tool. It reads a `.pfl` file
+ * or raw source code from the command line, tokenizes it with the `Lexer`, then
+ * parses it with the `Parser` to produce an AST, which is printed for inspection.
+ ******************************************************************************/
+
 use std::env;
 use std::fs;
 use std::process;
 
 use rdp::{Lexer, Parser};
 
-//-------------------------------------------------------------------------
-// Main Entry Point
-//-------------------------------------------------------------------------
-
-// This entry point handles command-line argument parsing, input source determination
-// (file or direct input), and orchestrates the lexing and parsing of the provided source code.
-//
-// ## Usage
-//
-// The application can be executed with the following command-line arguments:
-//
-// ```bash
-// <program_name> <file.pfl>
-// <program_name> "<source_code>"
-// ```
-//
-// - `<file.pfl>`: Path to a `.pfl` file containing source code.
-// - `<source_code>`: Direct source code input as a string.
-//
-// The program will read the input, tokenize it using the `Lexer`, parse the
-// tokens into an Abstract Syntax Tree (AST) using the `Parser`, and then
-// output the AST in a pretty-printed format.
 fn main() {
-    // Retrieve command-line arguments
+    // Collect command-line arguments
     let args: Vec<String> = env::args().collect();
 
-    // Ensure at least one argument is provided (the program name is args[0])
+    // We need at least 2 arguments: the program name and the input source (file or code).
     if args.len() < 2 {
         eprintln!("Usage:");
         eprintln!("  {} <file.pfl>", args[0]);
@@ -40,9 +26,11 @@ fn main() {
         process::exit(1);
     }
 
-    // Determine the input source
+    // Decide how to interpret the argument(s):
+    //  - If there's exactly one argument beyond the program name and it ends in `.pfl`,
+    //    read from that file.
+    //  - Otherwise, treat all subsequent arguments as direct source code, joined by spaces.
     let input = if args.len() == 2 && args[1].ends_with(".pfl") {
-        // Input is a .pfl file
         match fs::read_to_string(&args[1]) {
             Ok(content) => content,
             Err(err) => {
@@ -51,15 +39,12 @@ fn main() {
             }
         }
     } else {
-        // Input is source code provided directly or multiple arguments
-        // Join all arguments beyond the program name with spaces
+        // Join arguments beyond index 1 with spaces for direct source code.
         args[1..].join(" ")
     };
 
-    // Initialize the lexer with the input source code
+    // Create a lexer to tokenize the input.
     let mut lexer = Lexer::new(&input);
-
-    // Tokenize the input
     let tokens = match lexer.tokenize() {
         Ok(toks) => toks,
         Err(err) => {
@@ -68,10 +53,8 @@ fn main() {
         }
     };
 
-    // Initialize the parser with the tokens
+    // Create a parser to convert tokens into an AST (Program).
     let mut parser = Parser::new(tokens);
-
-    // Parse the tokens into an AST (Program)
     let program = match parser.parse_program() {
         Ok(prog) => prog,
         Err(err) => {
@@ -80,6 +63,6 @@ fn main() {
         }
     };
 
-    // Output the AST in a pretty-printed format
+    // Print the resulting AST in debug format.
     println!("{:#?}", program);
 }

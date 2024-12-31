@@ -1,89 +1,93 @@
 //! src/lexer.rs
 
+/********************************************************************************
+ *                            LEXER MODULE
+ *-------------------------------------------------------------------------------*
+ * This module converts raw input text into tokens defined in `token.rs`. It
+ * scans the input character-by-character, categorizing sequences into keywords,
+ * identifiers, numeric literals, operators, and more. The parser later uses
+ * these tokens for syntax analysis.
+ ********************************************************************************/
+
 use crate::{ParseError, Token};
 
-//-------------------------------------------------------------------------
-// Types
-//-------------------------------------------------------------------------
-
-/// The `Lexer` is responsible for tokenizing the input source code.
-///
-/// Tokenization is the process of breaking a raw input string into a sequence
-/// of tokens that represent the smallest syntactic units of the language.
-/// This is the first stage of parsing and ensures that the input is prepared
-/// for syntax analysis.
+/*-----------------------------------------------------------------------------
+ *                              LEXER STRUCT
+ *-----------------------------------------------------------------------------
+ * The `Lexer` holds the input as a vector of characters (`input`) and a cursor
+ * index (`current`). Methods on the `Lexer` advance through the input, producing
+ * tokens until exhaustion or error.
+ *---------------------------------------------------------------------------*/
 pub struct Lexer {
-    /// The input source code, split into individual characters.
+    /// The entire input, split into characters.
     input: Vec<char>,
-    /// The current position in the input.
+
+    /// Current position in `input`.
     current: usize,
 }
 
-//-------------------------------------------------------------------------
-// Implementations
-//-------------------------------------------------------------------------
-
 impl Lexer {
-    /// Creates a new `Lexer` instance from a given input string.
-    ///
-    /// # Arguments
-    /// - `input`: The source code to be tokenized.
-    ///
-    /// # Returns
-    /// A new `Lexer` instance ready to tokenize the input.
+    //--------------------------------------------------------------------------
+    // CONSTRUCTOR
+    //--------------------------------------------------------------------------
+
+    /// Creates a new `Lexer` from a &str. Internally stores the string’s characters.
     pub fn new(input: &str) -> Self {
-        Lexer {
+        Self {
             input: input.chars().collect(),
             current: 0,
         }
     }
 
-    /// Lexes the entire input string into a vector of tokens.
+    //--------------------------------------------------------------------------
+    // PUBLIC API
+    //--------------------------------------------------------------------------
+
+    /// Converts the entire input into a vector of `Token`s.
     ///
-    /// This method processes the input source code, identifying all tokens
-    /// and handling errors where the input is malformed.
-    ///
-    /// # Returns
-    /// - `Ok(Vec<Token>)` if tokenization is successful.
-    /// - `Err(ParseError)` if an error occurs during tokenization.
+    /// This processes each chunk of text until we reach the end, returning
+    /// `Ok(Vec<Token>)` on success, or `Err(ParseError)` if tokenization fails
+    /// due to malformed input.
     pub fn tokenize(&mut self) -> Result<Vec<Token>, ParseError> {
         let mut tokens = Vec::new();
 
+        // Keep producing tokens until we exhaust the input.
         while !self.is_at_end() {
             let token = self.next_token()?;
             tokens.push(token);
         }
 
-        tokens.push(Token::Eof); // Append the end-of-file token
+        // Append EOF marker.
+        tokens.push(Token::Eof);
         Ok(tokens)
     }
 
-    /// Reads the next token from the input source code.
-    ///
-    /// This method identifies the next meaningful token in the input, skipping
-    /// over whitespace and handling various token types (e.g., keywords, operators,
-    /// numbers, and identifiers).
-    ///
-    /// # Returns
-    /// - `Ok(Token)` if a valid token is identified.
-    /// - `Err(ParseError)` if an unexpected or invalid input is encountered.
+    //--------------------------------------------------------------------------
+    // NEXT TOKEN
+    //--------------------------------------------------------------------------
+
+    /// Fetches the next meaningful token, skipping any whitespace encountered.
     fn next_token(&mut self) -> Result<Token, ParseError> {
         self.skip_whitespace();
 
+        // If we’re at end, return EOF token.
         if self.is_at_end() {
             return Ok(Token::Eof);
         }
 
+        // Advance and examine the next character.
         let c = self.advance();
 
         match c {
-            // Keywords and symbols
+            // Check for keyword starts: e.g. 'l' -> "let", 'm' -> "match".
             'l' if self.peek_keyword("et") => self.consume_keyword("et", Token::Let),
             'i' if self.peek_keyword("f") => self.consume_keyword("f", Token::If),
             't' if self.peek_keyword("hen") => self.consume_keyword("hen", Token::Then),
             'e' if self.peek_keyword("lse") => self.consume_keyword("lse", Token::Else),
             'm' if self.peek_keyword("atch") => self.consume_keyword("atch", Token::Match),
             'w' if self.peek_keyword("ith") => self.consume_keyword("ith", Token::With),
+
+            // Single-char or small multi-char operators.
             '\\' => Ok(Token::Lambda),
             '=' if self.match_char('=') => Ok(Token::Equal),
             '<' => Ok(Token::LessThan),
@@ -102,16 +106,16 @@ impl Lexer {
             ':' => Ok(Token::Colon),
             '=' => Ok(Token::Assign),
 
-            // Numbers
-            c if c.is_ascii_digit() => self.number(c),
+            // If the character is numeric, parse a number literal.
+            ch if ch.is_ascii_digit() => self.number(ch),
 
-            // Identifiers
-            c if c.is_ascii_alphabetic() => self.identifier(c),
+            // If the character is alphabetic, parse an identifier (or potential keyword).
+            ch if ch.is_ascii_alphabetic() => self.identifier(ch),
 
-            // Wildcard identifier
+            // Underscore is recognized as a wildcard pattern.
             '_' => Ok(Token::Wildcard),
 
-            // Unexpected character
+            // Anything else is invalid or unexpected.
             _ => Err(ParseError::UnexpectedToken {
                 expected: "valid token".to_string(),
                 found: c.to_string(),
@@ -120,52 +124,57 @@ impl Lexer {
         }
     }
 
-    /// Consumes a numeric literal token.
-    ///
-    /// Supports integers and floating-point numbers.
+    //--------------------------------------------------------------------------
+    // NUMBER LITERALS
+    //--------------------------------------------------------------------------
+
+    /// Parses a numeric literal (integer or floating-point).
     ///
     /// # Arguments
-    /// - `start`: The first digit of the number.
-    ///
-    /// # Returns
-    /// - `Ok(Token::Number)` if the number is valid.
-    /// - `Err(ParseError)` if the number format is invalid.
+    /// * `start` - the initial digit we encountered.
     fn number(&mut self, start: char) -> Result<Token, ParseError> {
         let mut value = start.to_string();
 
+        // Accumulate any additional digits.
         while self.peek().map_or(false, |c| c.is_ascii_digit()) {
             value.push(self.advance());
         }
 
+        // If the next character is '.', collect decimal digits.
         if self.peek() == Some('.') {
             value.push(self.advance());
+
+            // Gather any digits after the decimal point.
             while self.peek().map_or(false, |c| c.is_ascii_digit()) {
                 value.push(self.advance());
             }
         }
 
+        // Convert to a floating-point value, or raise an error if invalid.
         value
             .parse::<f64>()
             .map(Token::Number)
             .map_err(|_| ParseError::InvalidNumberFormat(value))
     }
 
-    /// Consumes an identifier or keyword token.
+    //--------------------------------------------------------------------------
+    // IDENTIFIERS OR KEYWORDS
+    //--------------------------------------------------------------------------
+
+    /// Parses an identifier or falls back to a keyword if `value` matches one.
     ///
     /// # Arguments
-    /// - `start`: The first character of the identifier or keyword.
-    ///
-    /// # Returns
-    /// - `Ok(Token)` representing either a keyword or an identifier.
+    /// * `start` - the initial alphabetic character.
     fn identifier(&mut self, start: char) -> Result<Token, ParseError> {
-        let mut value = start.to_string();
+        let mut text = start.to_string();
 
+        // Accumulate subsequent alphanumeric chars.
         while self.peek().map_or(false, |c| c.is_ascii_alphanumeric()) {
-            value.push(self.advance());
+            text.push(self.advance());
         }
 
-        // Check for keywords
-        match value.as_str() {
+        // Check if it’s one of our known keywords (like "in"). Otherwise, an identifier.
+        match text.as_str() {
             "let" => Ok(Token::Let),
             "in" => Ok(Token::In),
             "if" => Ok(Token::If),
@@ -173,33 +182,27 @@ impl Lexer {
             "else" => Ok(Token::Else),
             "match" => Ok(Token::Match),
             "with" => Ok(Token::With),
-            // Default to identifier
-            _ => Ok(Token::Identifier(value)),
+            _ => Ok(Token::Identifier(text)),
         }
     }
 
-    /// Skips over whitespace characters in the input.
+    //--------------------------------------------------------------------------
+    // WHITESPACE SKIPPING
+    //--------------------------------------------------------------------------
+
+    /// Discards any leading whitespace before identifying a token.
     fn skip_whitespace(&mut self) {
         while self.peek().map_or(false, |c| c.is_whitespace()) {
             self.advance();
         }
     }
 
-    /// Peeks at the next character without consuming it.
-    ///
-    /// # Returns
-    /// The next character, if available.
-    fn peek(&self) -> Option<char> {
-        self.input.get(self.current).copied()
-    }
+    //--------------------------------------------------------------------------
+    // STRING VIEW & KEYWORD CHECK
+    //--------------------------------------------------------------------------
 
-    /// Checks if the current sequence matches a keyword.
-    ///
-    /// # Arguments
-    /// - `keyword`: The keyword to check for.
-    ///
-    /// # Returns
-    /// `true` if the keyword matches, `false` otherwise.
+    /// Verifies if the upcoming slice of input matches a given `keyword`.
+    /// (Used for multi-char checks like "et", "hen", etc.)
     fn peek_keyword(&self, keyword: &str) -> bool {
         self.input[self.current..]
             .iter()
@@ -208,38 +211,27 @@ impl Lexer {
             == keyword
     }
 
-    /// Consumes a keyword if it matches the current input.
-    ///
-    /// # Arguments
-    /// - `keyword`: The keyword to consume.
-    /// - `token`: The token to return if the keyword matches.
-    ///
-    /// # Returns
-    /// `Ok(Token)` representing the matched keyword.
+    /// Consumes a keyword from the input if it matches, returning the `token`.
     fn consume_keyword(&mut self, keyword: &str, token: Token) -> Result<Token, ParseError> {
+        // We already confirmed the match; just advance past the keyword.
         for _ in 0..keyword.len() {
             self.advance();
         }
         Ok(token)
     }
 
-    /// Advances the lexer and consumes the current character.
-    ///
-    /// # Returns
-    /// The consumed character.
+    //--------------------------------------------------------------------------
+    // CHARACTER UTILITIES
+    //--------------------------------------------------------------------------
+
+    /// Consumes and returns the next character in `input`.
     fn advance(&mut self) -> char {
-        let c = self.input[self.current];
+        let ch = self.input[self.current];
         self.current += 1;
-        c
+        ch
     }
 
-    /// Matches and consumes a specific character if it is the next in the input.
-    ///
-    /// # Arguments
-    /// - `expected`: The character to match.
-    ///
-    /// # Returns
-    /// `true` if the character is matched, `false` otherwise.
+    /// If the next character matches `expected`, consume it. Otherwise, return false.
     fn match_char(&mut self, expected: char) -> bool {
         if self.peek() == Some(expected) {
             self.advance();
@@ -249,10 +241,12 @@ impl Lexer {
         }
     }
 
-    /// Checks if the lexer has reached the end of the input.
-    ///
-    /// # Returns
-    /// `true` if at the end of input, `false` otherwise.
+    /// Provides the next character without consuming it, if available.
+    fn peek(&self) -> Option<char> {
+        self.input.get(self.current).copied()
+    }
+
+    /// Checks whether we have reached or passed the end of the input.
     fn is_at_end(&self) -> bool {
         self.current >= self.input.len()
     }

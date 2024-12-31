@@ -1,136 +1,166 @@
 //! src/ast.rs
 
-//-------------------------------------------------------------------------
-// Types
-//-------------------------------------------------------------------------
+/********************************************************************************
+ *                           AST (Abstract Syntax Tree)
+ *-------------------------------------------------------------------------------*
+ * This module contains data structures representing our language’s syntax in
+ * a tree form. The parser transforms tokens into these AST nodes, which serve
+ * as the foundation for further processing (e.g., interpretation or codegen).
+ ********************************************************************************/
 
-/// The root node of the Abstract Syntax Tree (AST).
-///
-/// A program consists of a single expression, which may contain nested expressions.
+/// A complete program is just a single `Expression`. By wrapping it in `Program`,
+/// we have a clear entry point for the entire AST.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Program {
     /// The root expression of the program.
     pub expression: Expression,
 }
 
-/// Represents an expression in the language.
-///
-/// Expressions form the core of the language's functionality, encompassing
-/// constructs like `let` bindings, conditionals, lambdas, pattern matching,
-/// comparisons, logic, arithmetic, and more.
+/********************************************************************************
+ *                          EXPRESSION ENUM
+ *-------------------------------------------------------------------------------*
+ * The heart of the AST. Each variant represents a distinct language construct,
+ * from `let` bindings and lambdas to pattern matches and arithmetic.
+ ********************************************************************************/
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
-    /// A `let` binding, which introduces a new variable or value.
+    /// A `let` binding (e.g., `let x = ... in ...`).
     LetExpr {
-        /// The identifier for the binding.
+        /// The name bound by this `let`.
         identifier: String,
-        /// An optional type annotation for the binding.
+        /// Optional type annotation (e.g., `x: Int`).
         type_annotation: Option<TypeAnnotation>,
-        /// The value to assign to the identifier.
+        /// The value assigned to the identifier (right side of `=`).
         value: Box<Expression>,
-        /// The body where the binding is available.
+        /// The body in which the binding is valid (after `in`).
         body: Box<Expression>,
     },
-    /// An `if` expression, representing conditional branching.
+
+    /// An `if` expression with a condition, `then` branch, and `else` branch.
     IfExpr {
-        /// The condition to evaluate.
+        /// The Boolean condition.
         condition: Box<Expression>,
-        /// The expression executed if the condition evaluates to true.
+        /// Evaluated if the condition is true.
         then_branch: Box<Expression>,
-        /// The expression executed if the condition evaluates to false.
+        /// Evaluated if the condition is false.
         else_branch: Box<Expression>,
     },
-    /// A lambda (anonymous function) abstraction.
+
+    /// A lambda (anonymous function): `\x -> expr`, possibly with a type annotation.
     Lambda {
-        /// The parameter name for the lambda.
+        /// The parameter name.
         parameter: String,
-        /// An optional type annotation for the parameter.
+        /// The optional type annotation for the parameter.
         type_annotation: Option<TypeAnnotation>,
-        /// The body of the lambda function.
+        /// The lambda body.
         body: Box<Expression>,
     },
-    /// A pattern match expression, allowing branching based on patterns.
+
+    /// A pattern match expression, like `match expr with | pat -> expr | pat -> expr`.
     PatternMatch {
-        /// The expression to match against.
+        /// The expression being matched against.
         expression: Box<Expression>,
-        /// The set of match arms to evaluate.
+        /// The arms, each holding a pattern and the corresponding branch expression.
         arms: Vec<MatchArm>,
     },
-    /// A comparison expression, e.g., `a < b` or `x == y`.
+
+    /// A comparison (e.g., `x < y`, `a == b`).
     Comparison {
-        /// The left-hand side of the comparison.
+        /// Left-hand side of the comparison.
         left: Box<Expression>,
-        /// The comparison operator.
+        /// Comparison operator (`<`, `>`, `==`).
         operator: ComparisonOperator,
-        /// The optional right-hand side of the comparison.
+        /// The right-hand side (if any). Our grammar supports a single optional comparison.
         right: Option<Box<Expression>>,
     },
-    /// A logical operation, e.g., `a && b` or `x || y`.
+
+    /// A logic operation (e.g., `a && b`, `c || d`).
     Logic {
-        /// The left-hand operand.
+        /// Left-hand operand.
         left: Box<Expression>,
-        /// The logical operator.
+        /// Logical operator (`&&`, `||`).
         operator: LogicOperator,
-        /// The optional right-hand operand.
+        /// The right-hand operand (if present).
         right: Option<Box<Expression>>,
     },
-    /// An arithmetic operation, e.g., `a + b` or `x * y`.
+
+    /// An arithmetic operation like `x + y` or `x * y`.
     Arithmetic {
-        /// The left-hand operand.
+        /// Left-hand operand.
         left: Box<Expression>,
-        /// The arithmetic operator.
+        /// Arithmetic operator (`+`, `-`, `*`, `/`).
         operator: ArithmeticOperator,
-        /// The right-hand operand.
+        /// Right-hand operand.
         right: Box<Expression>,
     },
-    /// A function or operator application, applied to a list of arguments.
+
+    /// A function or operator application, e.g., `f x y` or `func arg`.
     Application(Vec<Expression>),
-    /// A terminal node in the AST, such as a literal or grouped expression.
+
+    /// A terminal expression (identifier, number, grouped expr, etc.).
     Term(Term),
 
-    /// Function composition, e.g., `f . g`.
+    /// Function composition node for expressions like `f . g`.
     FunctionComposition(FunctionComposition),
 }
 
-/// Represents a terminal expression in the language.
+/********************************************************************************
+ *                                 TERM ENUM
+ *-------------------------------------------------------------------------------*
+ * Terminal forms in the AST: plain identifiers, numbers, grouped expressions,
+ * or member accesses (for expressions in parentheses with a dot).
+ ********************************************************************************/
 #[derive(Debug, PartialEq, Clone)]
 pub enum Term {
-    /// An identifier, e.g., variable or function names.
+    /// A variable or function name.
     Identifier(String),
-    /// A numeric literal.
+
+    /// A numeric literal (floats or ints).
     Number(f64),
-    /// A grouped expression, e.g., `(expr)`.
+
+    /// A grouped expression, e.g. `(expr)`.
     GroupedExpression(Box<Expression>),
-    /// Accessing a member of an object or structure, e.g., `object.member`.
+
+    /// Accessing a member: `(expr).member`.
     MemberAccess {
-        /// The base expression (e.g., the object or structure).
         expression: Box<Expression>,
-        /// The member being accessed.
         member: String,
     },
 }
 
-/// Represents a single arm of a pattern match expression.
+/********************************************************************************
+ *                            PATTERN MATCHING
+ *-------------------------------------------------------------------------------*
+ * Patterns and arms allow the user to discriminate values of an expression.
+ ********************************************************************************/
+
+/// A single `match` arm, pairing a `Pattern` with an expression to evaluate
+/// if that pattern matches.
 #[derive(Debug, PartialEq, Clone)]
 pub struct MatchArm {
-    /// The pattern to match.
     pub pattern: Pattern,
-    /// The expression to execute if the pattern matches.
     pub expression: Box<Expression>,
 }
 
-/// Represents a pattern in a pattern match expression.
+/// Patterns recognized in pattern matching, such as identifiers, numbers, or
+/// grouped patterns.
 #[derive(Debug, PartialEq, Clone)]
 pub enum Pattern {
-    /// A pattern matching an identifier.
+    /// A named pattern (e.g., `x`) or wildcard `_`.
     Identifier(String),
-    /// A pattern matching a numeric literal.
+
+    /// A numeric pattern (e.g., `42`).
     Number(f64),
-    /// A grouped pattern, e.g., `(pattern)`.
+
+    /// A grouped pattern `(pat)`.
     Grouped(Box<Pattern>),
 }
 
-/// Represents type annotations for variables, parameters, or expressions.
+/********************************************************************************
+ *                             TYPE ANNOTATIONS
+ *-------------------------------------------------------------------------------*
+ * Models our language's type system in the AST, including function types.
+ ********************************************************************************/
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeAnnotation {
     /// Integer type.
@@ -141,55 +171,52 @@ pub enum TypeAnnotation {
     String,
     /// Floating-point type.
     Float,
-    /// Function type, mapping one type to another.
+    /// A function type `(T1 -> T2)`.
     Function(Box<TypeAnnotation>, Box<TypeAnnotation>),
 }
 
-/// Represents operators for comparisons, e.g., `<`, `>`, `==`.
+/********************************************************************************
+ *                              OPERATORS
+ *-------------------------------------------------------------------------------*
+ * Comparisons, logic, arithmetic, and function composition are each captured
+ * in their own small enums or structs.
+ ********************************************************************************/
+
+/// Comparison operators (`==`, `<`, `>`).
 #[derive(Debug, PartialEq, Clone)]
 pub enum ComparisonOperator {
-    /// Equality operator (`==`).
     Equal,
-    /// Less-than operator (`<`).
     LessThan,
-    /// Greater-than operator (`>`).
     GreaterThan,
 }
 
-/// Represents logical operators, e.g., `&&`, `||`.
+/// Logical operators (`&&`, `||`).
 #[derive(Debug, PartialEq, Clone)]
 pub enum LogicOperator {
-    /// Logical AND operator (`&&`).
     And,
-    /// Logical OR operator (`||`).
     Or,
 }
 
-/// Represents arithmetic operators, e.g., `+`, `-`, `*`, `/`.
+/// Arithmetic operators (`+`, `-`, `*`, `/`).
 #[derive(Debug, PartialEq, Clone)]
 pub enum ArithmeticOperator {
-    /// Addition operator (`+`).
     Add,
-    /// Subtraction operator (`-`).
     Subtract,
-    /// Multiplication operator (`*`).
     Multiply,
-    /// Division operator (`/`).
     Divide,
 }
 
-/// Represents operators for function composition.
+/// Represents a function composition operator, typically `.`.
 #[derive(Debug, PartialEq, Clone)]
 pub enum CompositionOperator {
-    /// Function composition operator (`.`).
     Compose,
 }
 
-/// Represents a function composition expression.
+/// A node for function composition `f . g`.
 #[derive(Debug, PartialEq, Clone)]
 pub struct FunctionComposition {
-    /// The first function in the composition.
+    /// The first function in the composition chain.
     pub f: Box<Expression>,
-    /// The second function in the composition.
+    /// The second function in the chain.
     pub g: Box<Expression>,
 }
