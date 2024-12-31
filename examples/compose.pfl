@@ -1,4 +1,1 @@
-let add = \x -> x + 1 in
-let multiply = \x -> x * 2 in
-let composed = (add . multiply) in
-composed 5
+(\x -> x + 1) . (\y -> y * 2)

@@ -1,5 +1,5 @@
-let apply_twice = \f, x ->
-    f (f x)
-in
-let increment = \x -> x + 1 in
-apply_twice increment 5
+let applyTwice : ((Int -> Int) -> (Int -> Int)) =
+  (\f : (Int -> Int) ->
+     (\x : Int -> f (f x))
+  )
+in applyTwice (\y : Int -> y + 10) 5

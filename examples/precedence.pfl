@@ -1,4 +1,3 @@
-let a = 3 in
-let b = 4 in
-let c = 5 in
-a + b * c - (a + c) * b / a
+let x = 10 in
+let y = 5 in
+( x + y ) * 2 < ( y + 2 ) * 3 && x == 10
