@@ -53,7 +53,7 @@ RDP supports the following features:
 
 RDP's language is defined by an EBNF grammar that outlines the syntax and structure of valid programs. The grammar supports essential functional programming constructs.
 
-See [grammar.ebnf](grammar/grammar.ebnf) for the complete specification.
+See [grammar.ebnf](grammar.ebnf) for the complete specification.
 
 ### Example Expression
 
