@@ -1,26 +1,38 @@
 # RDP (Recursive Descent Parser)
 
-> A pure functional programming language implementation with recursive descent parsing.
+> A minimalist pure functional language implemented via recursive descent parsing.
 
 ## Overview
 
-RDP is a Recursive Descent Parser crafted for a minimalist pure functional programming language. Designed with clarity and educational purposes in mind, RDP emphasizes straightforward implementation of parsing techniques while supporting essential functional programming constructs.
+RDP is a small, educational language parser showcasing how to build a **recursive descent parser** for a pure functional language. It highlights the core constructs: **lambda expressions**, **let bindings**, **if-then-else**, **arithmetic**, **function application**, **pattern matching**, and **function composition**.
 
 ## Language Features
 
-RDP supports the following features:
+1. **Pure Functional Semantics**  
+   Immutability and first-class functions as fundamental concepts.
 
-- **Pure Functional Semantics**: Emphasizes immutability and first-class functions.
-- **Lambda Abstractions**: Anonymous functions using the `\` syntax.
-- **Let Bindings**: Variable declarations and bindings.
-- **Function Application**: Applying functions to arguments.
-- **Function Composition**: Combining functions using the `.` operator.
-- **Basic Arithmetic**: Support for addition, subtraction, multiplication, and division.
-- **Conditionals**: `if-then-else` expressions.
-- **Pattern Matching**: Deconstructing data structures with `match`.
-- **Comments**: Single-line (`//`) and multi-line (`/* ... */`) comments.
+2. **Lambda Abstractions**  
+   Single-parameter functions using the `\x -> expr` syntax.
 
-## Project Structure
+3. **Let Bindings**  
+   Introduce variables with `let x = ... in ...`.
+
+4. **Function Application**  
+   Apply functions to arguments in an expression-oriented style, e.g., `f x`.
+
+5. **Function Composition**  
+   Combine functions with the `.` operator, e.g., `(f . g)`.
+
+6. **Basic Arithmetic**  
+   Support for `+`, `-`, `*`, `/`.
+
+7. **Conditionals**  
+   `if-then-else` expressions for branching logic.
+
+8. **Pattern Matching**  
+   `match expr with | pattern -> expr ...` constructs for branching by comparing patterns (identifiers, numbers, grouped).
+
+## Project Layout
 
 ```
 .
@@ -33,8 +45,7 @@ RDP supports the following features:
 │   ├── higher_order.pfl
 │   ├── nested_let.pfl
 │   └── precedence.pfl
-├── grammar/
-│   └── grammar.ebnf
+├── grammar.ebnf
 └── src/
     ├── main.rs
     ├── ast.rs
@@ -45,17 +56,18 @@ RDP supports the following features:
     └── parser.rs
 ```
 
-- **`examples/`**: Contains example `.pfl` files demonstrating various language features.
-- **`grammar/grammar.ebnf`**: Defines the language's grammar in EBNF format.
-- **`src/`**: Source code for the lexer, parser, AST definitions, and the main executable.
+- **`examples/`**  
+  Includes sample `.pfl` files demonstrating language constructs.
+- **`grammar.ebnf`**  
+  Contains the full EBNF grammar specifying the language’s syntax.
+- **`src/`**  
+  Source code for the lexer, parser, AST definitions, error handling, and the CLI entry point (`main.rs`).
 
 ## Grammar
 
-RDP's language is defined by an EBNF grammar that outlines the syntax and structure of valid programs. The grammar supports essential functional programming constructs.
+See [`grammar.ebnf`](grammar.ebnf) for the complete specification of RDP’s syntax. It covers expressions like `let`, `if`, `match`, `lambda`, arithmetic, logical and comparison operators, function application, and function composition.
 
-See [grammar.ebnf](grammar.ebnf) for the complete specification.
-
-### Example Expression
+### Sample Expression
 
 ```pfl
 let compose = \f -> \g -> \x -> f (g x) in
@@ -66,85 +78,76 @@ compose double inc 5
 
 ## Implementation Details
 
-### Components
+### Lexer
 
-- **Lexer**: Converts source code into tokens, handling syntax elements like identifiers, numbers, operators, and comments.
-- **Parser**: Processes tokens to build an Abstract Syntax Tree (AST) based on the defined grammar.
-- **AST**: Represents the syntactic structure of the program, facilitating further processing like interpretation or compilation.
+- Converts the input string into a series of tokens: keywords (`let`, `if`, etc.), operators (`+`, `-`, etc.), identifiers, and numbers.
 
-### Parser Features
+### Parser
 
-- **Token-Based Lexical Analysis**: Efficiently tokenizes the input source.
-- **Recursive Descent Parsing**: Implements parsing functions corresponding to grammar rules.
-- **Error Recovery**: Attempts to continue parsing after encountering errors to collect multiple errors in a single run.
-- **Span-Based Error Reporting**: Provides precise locations (line and column) for syntax errors.
-- **AST Generation**: Constructs a hierarchical AST representing the program structure.
+- Uses a **recursive descent** approach, matching each grammar rule with a parsing function.
+- Produces an **Abstract Syntax Tree (AST)** that mirrors the structure of the language.
 
-### Operator Precedence
+### AST
 
-The parser respects the following operator precedence, from highest to lowest:
+- Models all expressions: `LetExpr`, `IfExpr`, `Lambda`, `PatternMatch`, `Arithmetic`, `Logic`, `Comparison`, `Application`, `Term`, etc.
+- Facilitates subsequent interpretation or optimization stages.
 
-1. **Parentheses**: `(` `)`
-2. **Function Application**: Left-associative
-3. **Function Composition**: Left-associative (`.` operator)
-4. **Arithmetic Operators**: `*`, `/`, `+`, `-`
-5. **Comparison Operators**: `==`, `<`, `>`
-6. **Logical Operators**: `&&`, `||`
-7. **Lambda Abstraction**: `\`
+## Operator Precedence
+
+RDP enforces the following precedence (highest to lowest):
+
+1. **Parentheses** (`( ... )`)
+2. **Function Application** (left-associative)
+3. **Function Composition** (`.` operator)
+4. **Arithmetic** (`+`, `-`, `*`, `/`)
+5. **Comparison** (`==`, `<`, `>`)
+6. **Logical** (`&&`, `||`)
+7. **Lambda** (`\`)
 8. **If-Then-Else**
 9. **Let-In**
 
 ## Usage
 
-RDP functions as a command-line interface (CLI), allowing you to parse `.pfl` files or provide source code directly.
+RDP provides a CLI tool to parse `.pfl` files or inline code.
 
-### Prerequisites
+### Requirements
 
-- **Rust**: Ensure you have Rust installed. You can install Rust from [rustup.rs](https://rustup.rs/).
-- **Cargo**: Rust's package manager, installed alongside Rust.
+- [Nix](https://determinate.systems/nix-installer/): Recommended for a reproducible dev environment.
 
-### Building the Project
-
-Clone the repository and navigate to its directory:
+### Building
 
 ```bash
 git clone https://github.com/xosnrdev/rdp.git
 cd rdp
-```
-
-Build the project using Cargo:
-
-```bash
+nix develop  # optional, to enter the dev shell
 cargo build --release
 ```
 
 ### Running the Parser
 
-#### Parsing a File
+1. **Parse a File**
 
-Provide a `.pfl` file as an argument:
+   ```bash
+   cargo run --release -- examples/arithmetic.pfl
+   ```
 
-```bash
-cargo run --release -- examples/arithmetic.pfl
-```
+   Prints the AST to `stdout`.
 
-#### Parsing Direct Source Code
+2. **Parse Source Inline**
 
-Provide source code directly as a command-line argument:
+   ```bash
+   cargo run --release -- "let x = 10 in x + 5"
+   ```
 
-```bash
-cargo run --release -- "let x = 10 in x + 5"
-```
+3. **Example**
 
-#### Example Command
+   ```bash
+   cargo run --release -- "let compose = \f -> \g -> \x -> f (g x) in compose double inc 5"
+   ```
 
-```bash
-cargo run --release -- "let compose = \f -> \g -> \x -> f (g x) in compose double inc 5"
-```
+## Example Output
 
-### Example Output
-
-The parser outputs the Abstract Syntax Tree (AST) in a pretty-printed format.
+When parsing `let x = 10 in x + 5`, you might see:
 
 ```rust
 Program {
@@ -152,21 +155,15 @@ Program {
         identifier: "x",
         type_annotation: None,
         value: Term(
-            Number(
-                10.0,
-            ),
+            Number(10.0),
         ),
         body: Arithmetic {
             left: Term(
-                Identifier(
-                    "x",
-                ),
+                Identifier("x"),
             ),
             operator: Add,
             right: Term(
-                Number(
-                    5.0,
-                ),
+                Number(5.0),
             ),
         },
     },
@@ -175,60 +172,43 @@ Program {
 
 ## Development
 
-### Building and Running
+### Building, Testing, and Running Examples
 
 ```bash
-# Build the project
+# Build
 cargo build
 
-# Run tests
+# Run all tests
 cargo test
 
-# Run a specific example
+# Parse a sample .pfl file
 cargo run --release -- examples/factorial.pfl
-```
-
-### Testing
-
-The test suite includes:
-
-- **Unit Tests**: For lexer and parser components.
-- **Integration Tests**: Using example `.pfl` files.
-- **Error Handling Tests**: Ensuring robust error reporting.
-- **Edge Cases**: Validating parser behavior with complex and unusual inputs.
-
-Run all tests with:
-
-```bash
-cargo test
 ```
 
 ## Examples
 
-The `examples/` directory contains various `.pfl` files demonstrating different language features:
+Common demonstrations reside in `examples/`:
 
-- **`arithmetic.pfl`**: Basic arithmetic operations and grouped expressions.
-- **`compose.pfl`**: Function composition using the `.` operator.
-- **`factorial.pfl`**: Recursive function implementation for calculating factorial.
-- **`higher_order.pfl`**: Higher-order functions, passing functions as arguments.
-- **`nested_let.pfl`**: Nested `let` expressions and variable shadowing.
-- **`precedence.pfl`**: Operator precedence and associativity.
-- **`comment_test.pfl`**: Usage of comments within code.
-
-### Sample Example: `higher_order.pfl`
-
-```pfl
-// higher_order.pfl
-
-let apply_twice = \f, x -> f (f x) in
-apply_twice increment 5
-```
+- **`arithmetic.pfl`**  
+  Basic arithmetic and grouped expressions
+- **`compose.pfl`**  
+  Composition with the `.` operator
+- **`factorial.pfl`**  
+  Recursive function example
+- **`higher_order.pfl`**  
+  Functions receiving other functions
+- **`nested_let.pfl`**  
+  Nested `let` structures
+- **`precedence.pfl`**  
+  Operator precedence demonstration
 
 ## References
 
-- [Crafting Interpreters](https://craftinginterpreters.com/)
-- [Parsing Techniques](https://dl.acm.org/doi/book/10.5555/1951778)
+- [Crafting Interpreters](https://craftinginterpreters.com/)  
+  Inspiration on building interpreters from scratch.
+- [Parsing Techniques](https://dl.acm.org/doi/book/10.5555/1951778)  
+  A deep reference for parsing methodologies.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md) for details.
+Licensed under [MIT](LICENSE.md). Contributions and forks are welcome!

@@ -14,7 +14,7 @@
  *   - Function composition with the dot operator (.)
  *   - Optional type annotations (e.g. `x: Int`)
  *
- * This version also includes a `parse_expression_no_composition` function, used
+ * It also includes a `parse_expression_no_composition` function, used
  * within parentheses to check for `( expr . identifier )` as member access
  * before function composition claims the dot operator.
  ******************************************************************************/

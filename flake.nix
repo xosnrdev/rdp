@@ -1,5 +1,6 @@
 {
-  description = "Recursive Decent Parser for a Programming Language";
+  description =
+    "A minimalist pure functional language implemented via recursive descent parsing.";
 
   # ----------------------------------------------------------------------------
   # Inputs
